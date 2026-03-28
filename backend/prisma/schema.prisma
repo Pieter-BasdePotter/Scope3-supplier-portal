@@ -1,0 +1,201 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum RequestStatus {
+  INVITED
+  STARTED
+  SUBMITTED
+  VALIDATED
+  ACCEPTED
+  REJECTED
+  PUBLISHED
+}
+
+enum DataSourceType {
+  MEASURED
+  CALCULATED
+  ESTIMATED
+  EXTERNAL_LCA
+}
+
+enum TransportMode {
+  ROAD
+  RAIL
+  SEA
+  AIR
+}
+
+enum QualityLabel {
+  A
+  B
+  C
+  D
+}
+
+// ─── Models ────────────────────────────────────────────────────────────────
+
+model SupplierRequest {
+  id              Int              @id @default(autoincrement())
+  supplierName    String
+  supplierEmail   String
+  referenceYear   Int
+  categoryContext String           @db.Text
+  token           String           @unique @db.VarChar(64)
+  tokenExpiresAt  DateTime
+  status          RequestStatus    @default(INVITED)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  response        SupplierResponse?
+  statusHistory   StatusHistory[]
+
+  @@index([token])
+  @@index([status])
+}
+
+model SupplierResponse {
+  id             Int              @id @default(autoincrement())
+  requestId      Int              @unique
+  request        SupplierRequest  @relation(fields: [requestId], references: [id])
+
+  orgName        String
+  identifier     String
+  identifierType String           @db.VarChar(20)
+  referenceYear  Int
+  dataSourceType DataSourceType
+  contactPerson  String
+  contactEmail   String
+
+  status         RequestStatus    @default(STARTED)
+  reviewNote     String?          @db.Text
+  submittedAt    DateTime?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  items          ResponseItem[]
+  transport      ResponseTransport[]
+  calculations   EmissionCalculation[]
+  attachments    Attachment[]
+
+  @@index([requestId])
+}
+
+model ResponseItem {
+  id             Int              @id @default(autoincrement())
+  responseId     Int
+  response       SupplierResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  productName    String
+  productCode    String?
+  outputQty      Float
+  outputUnit     String           @db.VarChar(20)
+  sortOrder      Int              @default(0)
+
+  // Activity data
+  electricityKwh Float?
+  gasM3          Float?
+  solidFuelKg    Float?
+  transportTkm   Float?
+  waterM3        Float?
+  heatKwh        Float?
+  otherInputs    Json?
+
+  // Plausibility check only — not authoritative
+  manualCo2e     Float?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  calculation    EmissionCalculation?
+
+  @@index([responseId])
+}
+
+model ResponseTransport {
+  id           Int              @id @default(autoincrement())
+  responseId   Int
+  response     SupplierResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  mode         TransportMode
+  distanceKm   Float
+  massKg       Float?
+  loadFactor   Float?
+  refrigerated Boolean          @default(false)
+
+  createdAt    DateTime         @default(now())
+
+  @@index([responseId])
+}
+
+model EmissionCalculation {
+  id                     Int              @id @default(autoincrement())
+  responseId             Int
+  response               SupplierResponse @relation(fields: [responseId], references: [id])
+  itemId                 Int?             @unique
+  item                   ResponseItem?    @relation(fields: [itemId], references: [id])
+
+  calcRuleVersion        String           @db.VarChar(20)
+  totalKgco2e            Float
+  intensityKgco2ePerUnit Float
+  qualityLabel           QualityLabel
+  deviationFlag          Boolean          @default(false)
+  deviationPercent       Float?
+
+  publishedAt            DateTime?
+  createdAt              DateTime         @default(now())
+
+  @@index([responseId])
+}
+
+model EmissionFactor {
+  id           Int      @id @default(autoincrement())
+  type         String   @db.VarChar(50)
+  unit         String   @db.VarChar(20)
+  factorKgco2e Float
+  region       String   @default("") @db.VarChar(10)
+  year         Int?
+  version      String   @db.VarChar(20)
+  source       String
+
+  @@unique([type, region, year, version])
+  @@index([type])
+}
+
+model StatusHistory {
+  id         Int              @id @default(autoincrement())
+  requestId  Int
+  request    SupplierRequest  @relation(fields: [requestId], references: [id])
+
+  oldStatus  String           @db.VarChar(20)
+  newStatus  String           @db.VarChar(20)
+  changedBy  String           @db.VarChar(100)
+  note       String?          @db.Text
+  createdAt  DateTime         @default(now())
+
+  @@index([requestId])
+}
+
+model Attachment {
+  id           Int              @id @default(autoincrement())
+  responseId   Int
+  response     SupplierResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  itemId       Int?
+
+  filename     String
+  originalName String
+  mimeType     String           @db.VarChar(100)
+  size         Int
+
+  createdAt    DateTime         @default(now())
+
+  @@index([responseId])
+}
