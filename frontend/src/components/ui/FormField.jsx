@@ -12,32 +12,35 @@ export function FormField({ label, error, required, children }) {
   );
 }
 
-export function Input({ error, className = '', ...props }) {
+export const Input = React.forwardRef(function Input({ error, className = '', ...props }, ref) {
   return (
     <input
+      ref={ref}
       className={`input-field ${error ? 'input-error' : ''} ${className}`}
       {...props}
     />
   );
-}
+});
 
-export function Select({ error, className = '', children, ...props }) {
+export const Select = React.forwardRef(function Select({ error, className = '', children, ...props }, ref) {
   return (
     <select
+      ref={ref}
       className={`input-field ${error ? 'input-error' : ''} ${className}`}
       {...props}
     >
       {children}
     </select>
   );
-}
+});
 
-export function Textarea({ error, className = '', ...props }) {
+export const Textarea = React.forwardRef(function Textarea({ error, className = '', ...props }, ref) {
   return (
     <textarea
+      ref={ref}
       rows={4}
       className={`input-field resize-y ${error ? 'input-error' : ''} ${className}`}
       {...props}
     />
   );
-}
+});

@@ -11,7 +11,10 @@ const logger  = require('./utils/logger');
 const app = express();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-app.use(cors({ origin: config.frontendUrl, credentials: true }));
+const corsOrigin = config.nodeEnv === 'production'
+  ? config.frontendUrl
+  : (origin, cb) => cb(null, true); // allow any localhost origin in dev
+app.use(cors({ origin: corsOrigin, credentials: true }));
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json());

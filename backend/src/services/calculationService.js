@@ -126,10 +126,12 @@ async function calculateResponse(responseId) {
   for (const item of response.items) {
     const calc = await calculateItem(item);
 
+    const { factorMissing, ...calcData } = calc;
+
     await prisma.emissionCalculation.upsert({
       where:  { itemId: item.id },
-      update: { ...calc, qualityLabel, responseId },
-      create: { ...calc, qualityLabel, responseId, itemId: item.id },
+      update: { ...calcData, qualityLabel, responseId },
+      create: { ...calcData, qualityLabel, responseId, itemId: item.id },
     });
 
     results.push({ itemId: item.id, productName: item.productName, ...calc, qualityLabel });

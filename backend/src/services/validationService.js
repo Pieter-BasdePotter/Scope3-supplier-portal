@@ -25,8 +25,7 @@ function normalizeNumber(val) {
 }
 
 const safePositiveFloat = z
-  .preprocess(normalizeNumber, z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Must be ≥ 0').finite('Must be a finite number'))
-  .optional();
+  .preprocess(normalizeNumber, z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Must be ≥ 0').finite('Must be a finite number').optional());
 
 const safePositiveFloatRequired = z.preprocess(
   normalizeNumber,
@@ -49,7 +48,7 @@ const stepASchema = z.object({
 
 const responseItemSchema = z.object({
   productName:    z.string().min(1, 'Product/service name is required'),
-  productCode:    z.string().optional(),
+  productCode:    z.preprocess(v => (v === null ? undefined : v), z.string().optional()),
   outputQty:      safePositiveFloatRequired,
   outputUnit:     z.enum(OUTPUT_UNITS, { errorMap: () => ({ message: `Unit must be one of: ${OUTPUT_UNITS.join(', ')}` }) }),
   electricityKwh: safePositiveFloat,
