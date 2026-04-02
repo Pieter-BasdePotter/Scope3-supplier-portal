@@ -442,6 +442,12 @@ api.post('/supplier/:token/submit', upload.any(), (req, res) => {
   res.json({ success: true, responseId: respId, calculations: calcs });
 });
 
+// ── Health check ──────────────────────────────────────────────────────────────
+
+api.get('/health', (req, res) => {
+  res.json({ ok: true, env: 'netlify', ts: new Date().toISOString() });
+});
+
 // ── Published results ──────────────────────────────────────────────────────────
 
 api.get('/published', (req, res) => {
